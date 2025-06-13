@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04   # ✅ استخدام Ubuntu 20.04 بدل 24.04
+    runs-on: ubuntu-22.04   # ✅ استخدم الإصدار الجديد
 
     steps:
     - name: Checkout repo
@@ -16,7 +16,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y git wget unzip bc curl build-essential \
           gcc clang libssl-dev lzop libxml2-utils zip rsync \
-          libncurses5-dev libncurses5 openjdk-8-jdk
+          libncurses-dev openjdk-8-jdk python2
+
+        # رابط python2 يدويًا علشان بعض السكربتات القديمة
+        sudo ln -sf /usr/bin/python2 /usr/bin/python
 
     - name: Setup repo
       run: |
