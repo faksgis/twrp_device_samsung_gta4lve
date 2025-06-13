@@ -1,4 +1,4 @@
-name: Build TWRP
+name: Build TWRP for gta4lve
 
 on:
   workflow_dispatch:
@@ -6,40 +6,43 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-    - name: إعداد بيئة العمل
-      uses: actions/checkout@v3
+      - name: Checkout Device Tree
+        uses: actions/checkout@v4
 
-    - name: تثبيت الحزم المطلوبة
-      run: |
-        sudo apt-get update
-        sudo apt-get install git-core gnupg flex bison build-essential zip curl zlib1g-dev \
-        gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev \
-        libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig bc \
-        python-is-python3 rsync -y
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev libwxgtk3.0-gtk3-dev python2
 
-    - name: تنزيل مصدر TWRP
-      run: |
-        mkdir -p ~/twrp
-        cd ~/twrp
-        repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
-        repo sync -j4
+      - name: Install Repo tool
+        run: |
+          mkdir ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          echo 'export PATH=~/bin:$PATH' >> $GITHUB_ENV
 
-    - name: نسخ ملفات الجهاز
-      run: |
-        cd ~/twrp/device
-        mkdir -p samsung
-        cp -r $GITHUB_WORKSPACE samsung/gta4lve
+      - name: Initialize repo
+        run: |
+          mkdir ~/twrp && cd ~/twrp
+          repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
+          repo sync -j$(nproc --all)
 
-    - name: بدء البناء
-      run: |
-        cd ~/twrp
-        . build/envsetup.sh
-        lunch twrp_gta4lve-eng
-        make -j$(nproc) recoveryimage
+      - name: Clone device tree
+        run: |
+          cd ~/twrp
+          git clone https://github.com/faksgis/twrp_device_samsung_gta4lve.git device/samsung/gta4lve
 
-    - name: رفع النتيجة
-      uses: actions/upload-artifact@v4
-      with:
-        name: TWRP-Recovery
-        path: ~/twrp/out/target/product/gta4lve/recovery.img
+      - name: Build TWRP
+        run: |
+          cd ~/twrp
+          source build/envsetup.sh
+          lunch twrp_gta4lve-eng
+          make recoveryimage -j$(nproc --all)
+
+      - name: Upload recovery image
+        uses: actions/upload-artifact@v4
+        with:
+          name: twrp-recovery
+          path: ~/twrp/out/target/product/gta4lve/recovery.img
