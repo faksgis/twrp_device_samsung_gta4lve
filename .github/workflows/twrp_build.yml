@@ -1,4 +1,4 @@
-name: Build TWRP for gta4lve
+name: Build TWRP
 
 on:
   workflow_dispatch:
@@ -7,36 +7,51 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up required packages
-        run: |
-          sudo apt update
-          sudo apt install -y git curl repo python3-kerberos
+    
+    - name: Checkout Source
+      uses: actions/checkout@v4
 
-      - name: Create working directory
-        run: |
-          mkdir -p ~/twrp && cd ~/twrp
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev \
+         gcc-multilib g++-multilib libc6-dev-i386 libncurses5-dev x11proto-core-dev \
+         libx11-dev libreadline6-dev libgl1-mesa-glx libgl1-mesa-dev g++-multilib \
+         mingw-w64 tofrodos python3 python3-pip unzip rsync libssl-dev repo
+        
+        pip install six
 
-      - name: Initialize and sync TWRP repo
-        run: |
-          cd ~/twrp
-          repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp -b twrp-12.1
-          repo sync -c --no-tags --no-clone-bundle --depth=1 -j8
+    - name: Create temp dir and initialize repo
+      run: |
+        mkdir -p ~/twrp && cd ~/twrp
+        repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1 --depth=1
+        repo sync -c --no-tags --no-clone-bundle --force-sync -j$(nproc --all)
+    
+    - name: Clone device tree
+      run: |
+        cd ~/twrp
+        git clone https://github.com/faksgis/twrp_device_samsung_gta4lve.git -b android-12.1 device/samsung/gta4lve
 
-      - name: Clone device tree
-        run: |
-          cd ~/twrp
-          git clone https://github.com/faksgis/twrp_device_samsung_gta4lve.git device/samsung/gta4lve
+    - name: Setup environment
+      run: |
+        cd ~/twrp
+        export ALLOW_MISSING_DEPENDENCIES=true
+        . build/envsetup.sh
+        lunch twrp_gta4lve-eng
 
-      - name: Build TWRP
-        run: |
-          cd ~/twrp
-          export ALLOW_MISSING_DEPENDENCIES=true
-          . build/envsetup.sh
-          lunch twrp_gta4lve-eng
-          mka recoveryimage
+    - name: Build TWRP
+      run: |
+        cd ~/twrp
+        make clean
+        make -j$(nproc --all) recoveryimage
 
-      - name: Upload recovery.img
-        uses: actions/upload-artifact@v4
-        with:
-          name: recovery.img
-          path: ~/twrp/out/target/product/gta4lve/recovery.img
+    - name: Compress recovery.img
+      run: |
+        cd ~/twrp/out/target/product/gta4lve
+        tar -czvf recovery.tar.gz recovery.img
+
+    - name: Upload recovery artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TWRP-Recovery
+        path: ~/twrp/out/target/product/gta4lve/recovery.tar.gz
