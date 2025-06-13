@@ -5,23 +5,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04   # ✅ استخدم الإصدار الجديد
+    runs-on: ubuntu-22.04
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git wget unzip bc curl build-essential \
-          gcc clang libssl-dev lzop libxml2-utils zip rsync \
-          libncurses-dev openjdk-8-jdk python2
+        sudo apt-get install -y git wget curl python2 bc bison build-essential zip \
+          unzip libssl-dev ca-certificates openjdk-8-jdk repo rsync \
+          libncurses5-dev libncurses-dev lzop libxml2-utils
 
-        # رابط python2 يدويًا علشان بعض السكربتات القديمة
+        # link python2 as default
         sudo ln -sf /usr/bin/python2 /usr/bin/python
 
-    - name: Setup repo
+    - name: Initialize repo
       run: |
         mkdir -p ~/twrp && cd ~/twrp
         repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
@@ -32,7 +29,7 @@ jobs:
         cd ~/twrp
         git clone https://github.com/faksgis/twrp_device_samsung_gta4lve.git device/samsung/gta4lve
 
-    - name: Lunch and Build
+    - name: Build TWRP
       run: |
         cd ~/twrp
         source build/envsetup.sh
