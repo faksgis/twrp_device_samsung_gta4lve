@@ -38,7 +38,14 @@ jobs:
         export ALLOW_MISSING_DEPENDENCIES=true
         . build/envsetup.sh
         lunch twrp_gta4lve-eng
-
+    - name: Clean up runner to free space
+      run: |
+        echo "Before cleanup:"
+         df -h
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+       sudo apt-get clean
+       echo "After cleanup:"
+       df -h
     - name: Build TWRP
       run: |
         cd ~/twrp
